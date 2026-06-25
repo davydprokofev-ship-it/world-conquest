@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Захват мира</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            padding: 30px;
+            margin: 0;
+        }
+        .game {
+            width: 1000px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .left-panel {
+            background: #111;
+            border: 1px solid #333;
+            padding: 30px;
+            text-align: center;
+        }
+        .country-icon {
+            width: 200px;
+            height: 150px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+            cursor: pointer;
+        }
+        .country-name { font-size: 32px; font-weight: bold; margin: 10px 0; }
+        .country-index { font-size: 16px; }
+        .hp-bar-outer {
+            height: 30px;
+            background: #222;
+            border: 1px solid #333;
+            margin: 15px 0;
+        }
+        .hp-bar-inner {
+            height: 100%;
+            background: #c0392b;
+        }
+        .hp-text { font-size: 18px; margin-bottom: 10px; }
+        .click-btn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: #1a0000;
+            border: 3px solid #c0392b;
+            color: #c0392b;
+            font-size: 22px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            margin: 25px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            line-height: 1.3;
+        }
+        .click-btn:active { background: #c0392b; color: #fff; transform: scale(0.95); }
+        .click-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .resource-display { font-size: 20px; }
+        .resource-display span { font-size: 24px; font-weight: bold; }
+        .per-sec { font-size: 16px; margin-top: 5px; }
+        .conquered-count { font-size: 16px; margin-top: 15px; }
+        
+        .right-panel {
+            background: #111;
+            border: 1px solid #333;
+            padding: 20px;
+        }
+        .upgrades-title { font-size: 18px; margin-bottom: 15px; }
+        .upgrades-list {
+            max-height: 650px;
+            overflow-y: auto;
+        }
+        .upgrade {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            padding: 16px 18px;
+            border: 1px solid #222;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .upgrade-icon {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            flex-shrink: 0;
+            cursor: pointer;
+            border: 1px solid #222;
+            transition: border-color 0.2s;
+            background: #0a0a0a;
+        }
+        .upgrade-icon:hover { border-color: #888; }
+        .upgrade-info { flex: 1; }
+        .upgrade-name { font-size: 16px; }
+        .upgrade-desc { font-size: 13px; color: #888; }
+        .upgrade button {
+            background: #222;
+            border: 1px solid #444;
+            color: #ccc;
+            padding: 10px 18px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .upgrade button:hover { border-color: #888; }
+        .upgrade button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .upgrade-locked {
+            color: #555;
+            font-size: 14px;
+        }
+        .question-icon {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            flex-shrink: 0;
+            background: #0a0a0a;
+            border: 1px solid #222;
+        }
+        
+        .cheat-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            padding: 12px;
+            font-size: 12px;
+            display: none;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            z-index: 10;
+        }
+        .cheat-panel.active { display: flex; }
+        .cheat-panel input {
+            background: #222;
+            border: 1px solid #444;
+            color: #ccc;
+            padding: 6px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            width: 140px;
+        }
+        .cheat-panel button {
+            background: #333;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .cheat-panel button:hover { border-color: #888; }
+        .cheat-label { color: #555; font-size: 11px; }
+        
+        .password-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .password-overlay.active { display: flex; }
+        .password-box {
+            background: #111;
+            border: 1px solid #333;
+            padding: 30px;
+            text-align: center;
+            width: 350px;
+        }
+        .password-box h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #c0392b;
+        }
+        .password-box p {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .password-box input {
+            width: 200px;
+            padding: 10px;
+            background: #222;
+            border: 1px solid #444;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            text-align: center;
+            letter-spacing: 8px;
+            margin-bottom: 15px;
+        }
+        .password-box button {
+            background: #333;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 10px 25px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 3px;
+        }
+        .password-box button:hover { border-color: #888; }
+        .password-error {
+            color: #c0392b;
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+        }
+        .password-error.active { display: block; }
+        
+        .secret-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            color: #222;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            z-index: 9;
+        }
+        .secret-btn:hover { color: #555; border-color: #555; }
+        
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #333; }
+    </style>
+</head>
+<body>
+    <div class="game">
+        
+        <div class="left-panel">
+            <img class="country-icon" id="countryIcon" src="https://static1.bigstockphoto.com/5/0/1/large1500/105749516.jpg" alt="флаг" onclick="openImage(this.src)" title="Открыть в новой вкладке">
+            
+            <div class="country-name" id="countryName">Монако</div>
+            <div class="country-index" id="countryIndex">Страна 1 из 20</div>
+            
+            <div class="hp-bar-outer">
+                <div class="hp-bar-inner" id="hpBar" style="width: 100%;"></div>
+            </div>
+            <div class="hp-text" id="hpText">HP: 10 / 10</div>
+            
+            <button class="click-btn" id="clickBtn">АТАКА</button>
+            
+            <div class="resource-display">
+                Военная мощь: <span id="resourceDisplay">0</span>
+            </div>
+            <div class="per-sec">
+                +<span id="clickPower">1</span> за клик | +<span id="autoPower">0</span>/сек
+            </div>
+            <div class="conquered-count" id="conqueredCount">
+                Захвачено стран: 0 / 20
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <div class="upgrades-title">Покупки за военную мощь</div>
+            <div class="upgrades-list" id="upgradesList"></div>
+        </div>
+        
+    </div>
+    
+    <button class="secret-btn" id="secretBtn" onclick="showPassword()">•••</button>
+    
+    <div class="password-overlay" id="passwordOverlay">
+        <div class="password-box">
+            <h3>ДОСТУП К КОНСОЛИ</h3>
+            <p>Введите код из 4 символов</p>
+            <input type="password" id="passwordInput" maxlength="4" placeholder="****" onkeypress="if(event.key==='Enter')checkPassword()">
+            <br>
+            <button onclick="checkPassword()">Проверить</button>
+            <button onclick="hidePassword()">Отмена</button>
+            <div class="password-error" id="passwordError">Неверный код. Попробуйте ещё раз.</div>
+        </div>
+    </div>
+    
+    <div class="cheat-panel" id="cheatPanel">
+        <span class="cheat-label">Консоль:</span>
+        <input type="text" id="cheatInput" placeholder="Сколько мощи?" onkeypress="if(event.key==='Enter')addCheatPower()">
+        <button onclick="addCheatPower()">Добавить</button>
+        <button onclick="unlockOne()">Открыть +1</button>
+        <button onclick="instaKill()">InstaKill</button>
+    </div>
+    <script>
+        var militaryPower = 0;
+        var clickPower = 1;
+        var autoPower = 0;
+        var currentCountryIndex = 0;
+        var conqueredCount = 0;
+        var unlockedUpgrades = 1;
+        
+        var countries = [
+            { name: 'Монако',           img: 'https://static1.bigstockphoto.com/5/0/1/large1500/105749516.jpg', hp: 10 },
+            { name: 'Лихтенштейн',      img: 'https://avatars.mds.yandex.net/i?id=ded678340cb37d1aa941297baa31acd0_l-7025773-images-thumbs&n=13', hp: 20 },
+            { name: 'Андорра',          img: 'https://yandex-images.clstorage.net/4LfIN8217/187032uJORo/oYwBWKSUhzYTFhBHs_CMVQrqyBVS9wA0fWIUkOizne6n2FXWoQ990tyIAIHo1ROtNzY_sjwufTVPv3KGrqJwePUcFEjzBUc3VgTS1LVziFBZ7ZjQAnFBNashFh4zb4OyvEZYyLzEN0GKy1RU-NIDPXlsLq_jsjz6U7g-DLRxpq7izEXSaMSG-5XMX401tcZRkeTMngU42fs9sQBTcSoG8vDOEIsxRbnND8aXVHoNzvj-6b8l4Hx9N5j8NQs59GDk6QlFFmgEj_YdCd2B9jPPmVmiQpIEe1ryv76Ik_6rCbP3z1GBP0fwggiOndu6y404-C634eG7PvLZfvFHc_QoZW3MTV2tS4C2XIYag_i1htIbo8sUQXYdu71wAxXxrQp5to3QQX6LscoCwl5Qs4gM-H5ifyQg9P34lro2xH20aachTwRRqckBf1SBWsS5d8VdkuhNGI053zo_O0iUsG2BsLvM3Af3RfDFAcnV3nVFD_r1KHch4_C5_Zk3ME98caKvpIyPX2QEgHqagJ8OtHrDktwgyRRI-9J2fz2CVX-rD_fzRplLvMrwj0_K1F5_zIL0d-j-5Os5vL1XtHTJ_PMhIeGMw1ypRk6xV0FTR7b4wZOaIMAVwnjfNrW2C5dxIcE-sIEfAz2EOcZBidjTtU-Cdb3pv2-rdPt2HPM0Afe_7WdogwPUYoIEvdKJXsZ7NYkRG6pM28x-k3i_OU6ctmaAP3KM1kCwyHyOQshd27fAQj5yoj9iLfA9OZY3cIs5OixnrcAC2CoDjvybgduDsbpEHRmnABAKfFL8frRPmv3jQnL6TxYEtUQwzsNNXlX9iQX7cO4wpKy7dTEbfD7FNzRgrqrKwFSghELxHQDaz7A9yBlZqcoQyHNVfHT4hli_qk26tskaR7aFfkmGAtYQvcMLOfKoum6lcnh-HDUwDjx75OkkjYCZJQVBPFwEFcU1M89a0-xCXA-3FzP8tIiTPA', hp: 35 },
+            { name: 'Мальта',           img: 'https://avatars.mds.yandex.net/i?id=fd7e5d883b1c4176ffd60851b25fecce_l-9203684-images-thumbs&n=13', hp: 60 },
+            { name: 'Люксембург',       img: 'https://static.vecteezy.com/system/resources/previews/046/968/479/non_2x/luxembourg-map-map-of-luxembourg-with-national-flag-free-vector.jpg', hp: 100 },
+            { name: 'Эстония',          img: 'https://static.vecteezy.com/system/resources/previews/036/171/398/non_2x/estonia-map-map-of-estonia-with-estonian-flag-vector.jpg', hp: 200 },
+            { name: 'Латвия',           img: 'https://i.pinimg.com/736x/70/d8/37/70d837f167789397d403ca333657dc5c.jpg', hp: 400 },
+            { name: 'Словения',         img: 'https://w7.pngwing.com/pngs/370/640/png-transparent-slovenia-map-flag-contour-borders-country-europe-eu-states-of-america-land-borders.png', hp: 800 },
+            { name: 'Хорватия',         img: 'https://www.world-card.ru/images/countries/Croatia/55.jpg', hp: 1500 },
+            { name: 'Португалия',       img: 'https://preview.free3d.com/img/2018/06/2705056417315817380/ckfg8oaq.jpg', hp: 3000 },
+            { name: 'Бельгия',          img: 'https://yandex-images.clstorage.net/4LfIN8217/187032uJORo/oYwBWKSUhzYTFhBHs_CMVQrqyBVS9wA0fWICUKhmn66n2BXWoE_oEkucQcDrAVGsImKosH2tPaBb63KGrqFwufTdFYjzBUc3VgTS1LVziFBZ7ZjQAnFBNashFh4zb4OyvEZYyLzEN0GKy1RU-NIDPXlsLq_jsjz6U7g-DLRxpq7izEXSaMSG-5XMX401tcZRkeTMngU42fs9sQBTcSoG8vDOEIsxRbnND8aXVHoNzvj-6b8l4Hx9N5j8NQs59GDk6QlFFmgEj_YdCd2B9jPPmVmiQpIEe1ryv76Ik_6rCbP3z1GBP0fwggiOndu6y404-C634eG7PvLZfvFHc_QoZW3MTV2tS4C2XIYag_i1htIbo8sUQXYdu71wAxXxrQp5to3QQX6LscoCwl5Qs4gM-H5ifyQg9P34lro2xH20aachTwRRqckBf1SBWsS5d8VdkuhNGI053zo_O0iUsG2BsLvM3Af3RfDFAcnV3nVFD_r1KHch4_C5_Zk3ME98caKvpIyPX2QEgHqagJ8OtHrDktwgyRRI-9J2fz2CVX-rD_fzRplLvMrwj0_K1F5_zIL0d-j-5Os5vL1XtHTJ_PMhIeGMw1ypRk6xV0FTR7b4wZOaIMAVwnjfNrW2C5dxIcE-sIEfAz2EOcZBidjTtU-Cdb3pv2-rdPt2HPM0Afe_7WdogwPUYoIEvdKJXsZ7NYkRG6pM28x-k3i_OU6ctmaAP3KM1kCwyHyOQshd27fAQj5yoj9iLfA9OZY3cIs5OixnrcAC2CoDjvybgduDsbpEHRmnABAKfFL8frRPmv3jQnL6TxYEtUQwzsNNXlX9iQX7cO4wpKy7dTEbfD7FNzRgrqrKwFSghELxHQDaz7A9yBlZqcoQyHNVfHT4hli_qk26tskaR7aFfkmGAtYQvcMLOfKoum6lcnh-HDUwDjx75OkkjYCZJQVBPFwEFcU1M89a0-xCXA-3FzP8tIiTPA', hp: 6000 },
+            { name: 'Нидерланды',       img: 'https://avatars.mds.yandex.net/i?id=5ccd942772c560bcb53270ff933c2dd8_l-12377225-images-thumbs&n=13', hp: 12000 },
+            { name: 'Польша',           img: 'https://media.istockphoto.com/id/1566916943/ru/%D0%B2%D0%B5%D0%BA%D1%82%D0%BE%D1%80%D0%BD%D0%B0%D1%8F/%D1%81%D0%B8%D0%BB%D1%83%D1%8D%D1%82-%D0%BA%D0%B0%D1%80%D1%82%D1%8B-%D0%BF%D0%BE%D0%BB%D1%8C%D1%88%D0%B8-%D1%81-%D0%B5%D0%B5-%D1%84%D0%BB%D0%B0%D0%B3%D0%BE%D0%BC.jpg?s=612x612&w=0&k=20&c=qWAhrFgD9i3tCa0tft0_rTdb3bi2Jw-QayvxPDnh5QM=', hp: 50000 },
+            { name: 'Испания',          img: 'https://thumbs.dreamstime.com/b/spain-6606771.jpg', hp: 200000 },
+            { name: 'Италия',           img: 'https://p.turbosquid.com/ts-thumb/zG/MuomW2/io/1/jpg/1676394335/1920x1080/fit_q87/ab0610d26a332327fdaf58bea4143faef9d6126a/1.jpg', hp: 800000 },
+            { name: 'Франция',          img: 'https://avatars.mds.yandex.net/i?id=00cdd8c7689c9084b9eeb8d5e2a021b626fbdb49-7762005-images-thumbs&n=13', hp: 3000000 },
+            { name: 'Великобритания',   img: 'https://media.istockphoto.com/id/1620659973/tr/vekt%C3%B6r/united-kingdom-map-with-waving-flag-isolated-on-white-background.jpg?s=170667a&w=0&k=20&c=t5mVobD3bPxR8yk21Lecb_nGKhKNbY6WnSyGajh3bek=', hp: 10000000 },
+            { name: 'Германия',         img: 'https://static.vecteezy.com/system/resources/previews/012/897/930/non_2x/germany-map-highlighted-in-germany-flag-colors-vector.jpg', hp: 40000000 },
+            { name: 'Китай',            img: 'https://media.istockphoto.com/id/2177742355/tr/vekt%C3%B6r/china-map-with-flag-isolated-on-white-background-for-icon-logo-web-graphic-vector.jpg?s=170667a&w=0&k=20&c=qTa8OOFtxYCiDJIvNvg2ivtgqMGGWTc6wDU5iJ_CBkw=', hp: 200000000 },
+            { name: 'США',              img: 'https://i.ytimg.com/vi/y-OxvOMIDaE/maxresdefault.jpg', hp: 1000000000 }
+        ];
+        
+        var currentHp = countries[0].hp;
+        var maxHp = countries[0].hp;
+        
+        var upgrades = [
+            { name: 'Пехотинец',        desc: '+1 к атаке за клик',      img: 'https://avatars.mds.yandex.net/i?id=5a15eeb1ae982aaeaa87b4d58b8949b3_l-13212321-images-thumbs&n=13', effect: 'click', value: 1,    cost: 50,    count: 0 },
+            { name: 'Мин нет? Давай',   desc: '+0.5 мощи/сек',           img: 'https://cs6.pikabu.ru/post_img/big/2014/03/30/10/1396193583_1887152879.jpg', effect: 'auto',  value: 0.5,  cost: 200,   count: 0 },
+            { name: 'Система ПВО',       desc: '+2 к атаке за клик',      img: 'https://s01.yapfiles.ru/files_thumb/9/1/1/3621119.jpg', effect: 'click', value: 2,    cost: 500,   count: 0 },
+            { name: 'Боевой самолет',     desc: '+3 мощи/сек',             img: 'https://yt3.googleusercontent.com/v9Q63pompJdGQh8DAvN8667KSSRI1Zvc1wmoZ3wAOvnvI0VOmBVOJUa_tmkhDHIDXPcsUg-kJQ=s900-c-k-c0x00ffffff-no-rj', effect: 'auto',  value: 3,    cost: 2000,  count: 0 },
+            { name: 'Машина прорыва',      desc: '+5 к атаке за клик',      img: 'https://50.img.avito.st/image/1/1.poHgCba5Cmj2obBioAeTg3-qDGJUCgPSXqoIbFygAGo.AQy0QkyTBcdaqcBmTCygsMgEbTTBJwS_Ak_JPoQdDkI', effect: 'click', value: 5,    cost: 5000,  count: 0 },
+            { name: 'Рота газовой атаки',  desc: '+10 мощи/сек',            img: 'https://i.pinimg.com/originals/cb/3c/bd/cb3cbde0651de9e00765b3c4b0ea2f8a.jpg', effect: 'auto',  value: 10,   cost: 15000, count: 0 },
+            { name: 'Летчики асы',          desc: '+15 к атаке за клик',     img: 'https://images.meme-arsenal.com/4b98adc860da7ec0d8d8ff5a3a4a334c.jpg', effect: 'click', value: 15,   cost: 50000, count: 0 },
+            { name: 'Буханка',   desc: '+30 мощи/сек',            img: 'https://cs9.pikabu.ru/post_img/2018/09/15/3/og_og_1536977145233377238.jpg', effect: 'auto',  value: 30,   cost: 150000, count: 0 },
+            { name: 'Улучшенные снаряды',         desc: '+50 к атаке за клик',     img: 'https://i.ytimg.com/vi/jD9THl7E0oU/maxresdefault.jpg', effect: 'click', value: 50,   cost: 500000, count: 0 },
+            { name: 'Секретные французкие разработки',        desc: '+80 мощи/сек',            img: 'https://yandex-images.clstorage.net/4LfIN8217/187032uJORo/oYwBWKSUhzYTFhBHs_CMVQrqyBVS9wA0fWIXhf0yni4nmcICo04ph4vdQQA_lEfso3ZqpD3ta3Vb6vKGrqJwubWclUjzBUc3VgTS1LVziFBZ7ZjQAnFBNashFh4zb4OyvEZYyLzEN0GKy1RU-NIDPXlsLq_jsjz6U7g-DLRxpq7izEXSaMSG-5XMX401tcZRkeTMngU42fs9sQBTcSoG8vDOEIsxRbnND8aXVHoNzvj-6b8l4Hx9N5j8NQs59GDk6QlFFmgEj_YdCd2B9jPPmVmiQpIEe1ryv76Ik_6rCbP3z1GBP0fwggiOndu6y404-C634eG7PvLZfvFHc_QoZW3MTV2tS4C2XIYag_i1htIbo8sUQXYdu71wAxXxrQp5to3QQX6LscoCwl5Qs4gM-H5ifyQg9P34lro2xH20aachTwRRqckBf1SBWsS5d8VdkuhNGI053zo_O0iUsG2BsLvM3Af3RfDFAcnV3nVFD_r1KHch4_C5_Zk3ME98caKvpIyPX2QEgHqagJ8OtHrDktwgyRRI-9J2fz2CVX-rD_fzRplLvMrwj0_K1F5_zIL0d-j-5Os5vL1XtHTJ_PMhIeGMw1ypRk6xV0FTR7b4wZOaIMAVwnjfNrW2C5dxIcE-sIEfAz2EOcZBidjTtU-Cdb3pv2-rdPt2HPM0Afe_7WdogwPUYoIEvdKJXsZ7NYkRG6pM28x-k3i_OU6ctmaAP3KM1kCwyHyOQshd27fAQj5yoj9iLfA9OZY3cIs5OixnrcAC2CoDjvybgduDsbpEHRmnABAKfFL8frRPmv3jQnL6TxYEtUQwzsNNXlX9iQX7cO4wpKy7dTEbfD7FNzRgrqrKwFSghELxHQDaz7A9yBlZqcoQyHNVfHT4hli_qk26tskaR7aFfkmGAtYQvcMLOfKoum6lcnh-HDUwDjx75OkkjYCZJQVBPFwEFcU1M89a0-xCXA-3FzP8tIiTPA', effect: 'auto',  value: 80,   cost: 1500000, count: 0 },
+            { name: 'Сильный лидер',    desc: '+200 к атаке за клик',    img: 'https://avatars.mds.yandex.net/i?id=3d955dc9864eb2ffc0cf804a10bb80bd_l-5478040-images-thumbs&n=13', effect: 'click', value: 200,  cost: 5000000, count: 0 },
+            { name: 'Царь бомба',    desc: '+300 мощи/сек',           img: 'https://i.pinimg.com/736x/cd/5e/e7/cd5ee70103429b21b0de429ea22e1b30.jpg', effect: 'auto',  value: 300,  cost: 20000000, count: 0 }
+        ];
+        
+        var questionImg = 'https://i.imgur.com/3VY8qGk.png';
+        
+        function format(num) {
+            if (num >= 1000000000) return (num / 1000000000).toFixed(1) + 'B';
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+            return Math.floor(num).toString();
+        }
+        
+        function openImage(src) {
+            window.open(src, '_blank');
+        }
+        
+        function updateCountry() {
+            document.getElementById('countryIcon').src = countries[currentCountryIndex].img;
+            document.getElementById('countryName').textContent = countries[currentCountryIndex].name;
+            document.getElementById('countryIndex').textContent = 'Страна ' + (currentCountryIndex + 1) + ' из ' + countries.length;
+            document.getElementById('hpText').textContent = 'HP: ' + format(Math.ceil(currentHp)) + ' / ' + format(maxHp);
+            document.getElementById('hpBar').style.width = (currentHp / maxHp * 100) + '%';
+            document.getElementById('resourceDisplay').textContent = format(Math.floor(militaryPower));
+            document.getElementById('clickPower').textContent = format(clickPower);
+            document.getElementById('autoPower').textContent = autoPower % 1 === 0 ? format(autoPower) : autoPower.toFixed(1);
+            document.getElementById('conqueredCount').textContent = 'Захвачено стран: ' + conqueredCount + ' / ' + countries.length;
+        }
+        
+        function renderUpgrades() {
+            var container = document.getElementById('upgradesList');
+            container.innerHTML = '';
+            
+            for (var i = 0; i < upgrades.length; i++) {
+                var div = document.createElement('div');
+                div.className = 'upgrade';
+                
+                if (i < unlockedUpgrades) {
+                    var u = upgrades[i];
+                    div.innerHTML = 
+                        '<img class="upgrade-icon" src="' + u.img + '" alt="иконка" onclick="openImage(\'' + u.img + '\')" title="Открыть в новой вкладке">' +
+                        '<div class="upgrade-info">' +
+                            '<div class="upgrade-name">' + u.name + 
+                            (u.count > 0 ? ' ×' + u.count : '') + '</div>' +
+                            '<div class="upgrade-desc">' + u.desc + '</div>' +
+                        '</div>' +
+                        '<button onclick="buyUpgrade(' + i + ')" ' + (militaryPower < u.cost ? 'disabled' : '') + '>' +
+                            format(u.cost) + ' мощи' +
+                        '</button>';
+                } else {
+                    div.innerHTML = 
+                        '<img class="question-icon" src="https://static.vecteezy.com/system/resources/previews/056/613/374/non_2x/3d-red-question-mark-shape-query-symbol-punctuation-is-isolated-on-transparent-background-free-png.png" alt="закрыто">' +
+                        '<div class="upgrade-info">' +
+                            '<div class="upgrade-name">???' + '</div>' +
+                            '<div class="upgrade-desc">Откроется позже</div>' +
+                        '</div>' +
+                        '<button disabled>???</button>';
+                }
+                
+                container.appendChild(div);
+            }
+        }
+        
+        function buyUpgrade(index) {
+            var u = upgrades[index];
+            if (militaryPower < u.cost) return;
+            militaryPower -= u.cost;
+            u.count++;
+            if (u.effect === 'click') clickPower += u.value;
+            else autoPower += u.value;
+            
+            if (index + 1 === unlockedUpgrades && unlockedUpgrades < upgrades.length) {
+                unlockedUpgrades++;
+            }
+            
+            renderUpgrades();
+            updateCountry();
+        }
+        
+        function nextCountry() {
+            conqueredCount++;
+            currentCountryIndex++;
+            if (currentCountryIndex >= countries.length) {
+                document.getElementById('countryIcon').src = 'https://via.placeholder.com/200x150/111111/ffd700?text=WIN';
+                document.getElementById('countryName').textContent = 'МИР ЗАХВАЧЕН!';
+                document.getElementById('countryIndex').textContent = 'Все 20 стран повержены';
+                document.getElementById('hpText').textContent = 'ПОБЕДА!';
+                document.getElementById('clickBtn').disabled = true;
+                document.getElementById('clickBtn').textContent = '✓';
+                document.getElementById('conqueredCount').textContent = 'Захвачено стран: 20 / 20';
+                updateCountry();
+                return;
+            }
+            maxHp = countries[currentCountryIndex].hp;
+            currentHp = maxHp;
+            updateCountry();
+        }
+        
+        // Пароль
+        function showPassword() {
+            document.getElementById('passwordOverlay').classList.add('active');
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordError').classList.remove('active');
+            setTimeout(function() {
+                document.getElementById('passwordInput').focus();
+            }, 100);
+        }
+        
+        function hidePassword() {
+            document.getElementById('passwordOverlay').classList.remove('active');
+        }
+        
+        function checkPassword() {
+            var input = document.getElementById('passwordInput').value;
+            if (input === '5') {
+                document.getElementById('passwordOverlay').classList.remove('active');
+                document.getElementById('cheatPanel').classList.add('active');
+                document.getElementById('secretBtn').style.display = 'none';
+            } else {
+                document.getElementById('passwordError').classList.add('active');
+                document.getElementById('passwordInput').value = '';
+            }
+        }
+        
+        // Читы
+        function addCheatPower() {
+            var input = document.getElementById('cheatInput');
+            var amount = parseInt(input.value);
+            if (amount > 0) {
+                militaryPower += amount;
+                updateCountry();
+                renderUpgrades();
+                input.value = '';
+            }
+        }
+        
+        function unlockOne() {
+            if (unlockedUpgrades < upgrades.length) {
+                unlockedUpgrades++;
+                renderUpgrades();
+            }
+        }
+        
+        function instaKill() {
+            if (currentHp <= 0) return;
+            currentHp = 0;
+            nextCountry();
+            renderUpgrades();
+            updateCountry();
+        }
+        
+        // Клик
+        document.getElementById('clickBtn').addEventListener('click', function() {
+            if (currentHp <= 0) return;
+            currentHp -= clickPower;
+            militaryPower += clickPower;
+            if (currentHp <= 0) { currentHp = 0; nextCountry(); }
+            renderUpgrades();
+            updateCountry();
+        });
+        
+        // Автодобыча
+        setInterval(function() {
+            if (autoPower > 0 && currentHp > 0) {
+                var dps = autoPower / 10;
+                currentHp -= dps;
+                militaryPower += dps;
+                if (currentHp <= 0) { currentHp = 0; nextCountry(); }
+                updateCountry();
+            }
+        }, 100);
+        
+        updateCountry();
+        renderUpgrades();
+    </script>
+</body>
+</html>
